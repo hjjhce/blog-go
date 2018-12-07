@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,10 +13,23 @@ import (
 var validate *validator.Validate
 var latestVer = "/v1"
 
+const adminSign = "whyspacex"
+
 func ilog(h httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+		log.Printf("[Request]: %s %s %s", r.Host, r.URL.RequestURI(), r.Method)
+
+		r.ParseForm()
+		s := r.FormValue("sign")
+
+		if s != adminSign {
+			err := errors.New("没有访问权限")
+			resp := createFailResp(StatusForbidden, err)
+			resp.returnJSON(w, r, http.StatusForbidden)
+			return
+		}
 		h(w, r, ps)
-		log.Printf("[Request]: %s %s %s", r.Host, r.URL.Path, r.Method)
 	}
 }
 
@@ -34,7 +48,8 @@ func main() {
 		fmt.Fprintln(w, p)
 	})
 	router.POST("/v1/login", ilog(login))
-	router.POST("/v1/user-add", ilog(userAdd))
+	router.POST("/v1/user/add", ilog(userAdd))
+	router.GET("/v1/users", ilog(users))
 
 	log.Fatal(http.ListenAndServe(":9090", router))
 }

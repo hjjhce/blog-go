@@ -28,6 +28,12 @@ type Auth struct {
 	Password string `json:"password" validate:"required"`
 }
 
+// 用户角色对应关系
+var roleName = [...]string{
+	0: "管理员",
+	1: "普通用户",
+}
+
 // Login 用户登录认证
 func (m *Auth) Login() (int64, error) {
 
@@ -39,6 +45,28 @@ func (m *Auth) Login() (int64, error) {
 	}
 
 	return id, nil
+}
+
+// Users 获取用户列表
+func Users() ([]*User, error) {
+
+	rows, _ := Conn.Query("SELECT id,name,email,role FROM users")
+
+	var res []*User
+	var err error
+	for rows.Next() {
+		var id int64
+		var name string
+		var email string
+		var role int
+		err = rows.Scan(&id, &name, &email, &role)
+		if err != nil {
+			break
+		}
+
+		res = append(res, &User{ID: id, Name: name, Email: email, Role: role})
+	}
+	return res, err
 }
 
 // Create 创建用户
@@ -72,5 +100,14 @@ func Update() {
 
 // Delete 删除用户
 func Delete() {
+
+}
+
+type sess struct {
+	Token    string
+	Duration time.Duration
+}
+
+func createSession() {
 
 }

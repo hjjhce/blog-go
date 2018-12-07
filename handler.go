@@ -25,8 +25,11 @@ const StatusRequestJSONErr = "4001"
 // StatusParamsValidErr 请求参数格式错误
 const StatusParamsValidErr = "4002"
 
+// StatusForbidden 没有访问的权限
+const StatusForbidden = "4003"
+
 // StatusAuthErr 登录认证失败
-const StatusAuthErr = "4003"
+const StatusAuthErr = "4005"
 
 // StatusServerErr 服务器内部错误
 const StatusServerErr = "5000"
@@ -145,4 +148,20 @@ func userAdd(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	resp := createSuccessResp(d{ID: id})
 	resp.returnJSON(w, r, http.StatusOK)
 	return
+}
+
+// 获取用户列表
+func users(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+	// 验证用户是否登录
+	// session验证
+	rows, err := data.Users()
+	if err != nil {
+		resp := createFailResp(StatusServerErr, err)
+		resp.returnJSON(w, r, http.StatusServiceUnavailable)
+		return
+	}
+
+	resp := createSuccessResp(rows)
+	resp.returnJSON(w, r, http.StatusOK)
 }
