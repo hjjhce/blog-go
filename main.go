@@ -15,7 +15,7 @@ var latestVer = "/v1"
 
 const adminSign = "whyspacex"
 
-func ilog(h httprouter.Handle) httprouter.Handle {
+func middleware(h httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 		log.Printf("[Request]: %s %s %s", r.Host, r.URL.RequestURI(), r.Method)
@@ -38,7 +38,7 @@ func main() {
 	f := createLogFile()
 	defer f.Close()
 
-	log.SetOutput(f)
+	// log.SetOutput(f)
 
 	// 重新写个路由
 	router := httprouter.New()
@@ -47,9 +47,11 @@ func main() {
 	router.GET("/ping", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		fmt.Fprintln(w, p)
 	})
-	router.POST("/v1/login", ilog(login))
-	router.POST("/v1/user/add", ilog(userAdd))
-	router.GET("/v1/users", ilog(users))
+	router.POST("/v1/users/login", middleware(login))
+	router.POST("/v1/users", middleware(userAdd))
+	router.GET("/v1/users", middleware(users))
+	router.PUT("/v1/users/{id}", middleware(usersUpdate))
+	router.DELETE("/v1/users/{id}", middleware(usersDelete))
 
 	log.Fatal(http.ListenAndServe(":9090", router))
 }

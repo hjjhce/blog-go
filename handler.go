@@ -50,6 +50,7 @@ func (res *result) returnJSON(w http.ResponseWriter, r *http.Request, code int) 
 	log.Printf("[response]: %s %s [%s]%s", r.Method, r.URL.Path, res.Error.Code, res.Error.Errmsg)
 
 	w.WriteHeader(code)
+	// json.MarshalIndent(res);w.Write(res)
 	json.NewEncoder(w).Encode(res)
 }
 
@@ -82,18 +83,30 @@ func login(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	id, err := auth.Login()
+	var user *data.User
+	user, err = auth.Login()
 	if err != nil {
 		resp := createFailResp(StatusAuthErr, err)
 		resp.returnJSON(w, r, http.StatusUnauthorized)
 		return
 	}
 
+	user.CreateSession()
+
+	//设置cookie
+	c := http.Cookie{
+		Name:     "uid",
+		Value:    user.SessionUID(),
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, &c)
+
 	type mdata struct {
 		ID int64 `json:"id"`
 	}
 
-	resp := createSuccessResp(mdata{ID: id})
+	resp := createSuccessResp(mdata{ID: user.ID})
 	resp.returnJSON(w, r, http.StatusOK)
 }
 
@@ -134,7 +147,7 @@ func userAdd(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	id, err := user.Create()
+	err = user.Create()
 	if err != nil {
 		resp := createFailResp(StatusServerErr, err)
 		resp.returnJSON(w, r, http.StatusServiceUnavailable)
@@ -145,7 +158,7 @@ func userAdd(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		ID int64 `json:"id"`
 	}
 
-	resp := createSuccessResp(d{ID: id})
+	resp := createSuccessResp(d{ID: user.ID})
 	resp.returnJSON(w, r, http.StatusOK)
 	return
 }
@@ -164,4 +177,12 @@ func users(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	resp := createSuccessResp(rows)
 	resp.returnJSON(w, r, http.StatusOK)
+}
+
+func usersUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+}
+
+func usersDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
 }

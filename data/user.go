@@ -35,16 +35,17 @@ var roleName = [...]string{
 }
 
 // Login 用户登录认证
-func (m *Auth) Login() (int64, error) {
+func (m *Auth) Login() (u *User, err error) {
 
-	var id int64
-	err := Conn.QueryRow("SELECT id FROM users WHERE email=? and password=?", m.Email, Encrypt(m.Password)).Scan(&id)
+	u = &User{}
+	// var id int64
+	err = Conn.QueryRow("SELECT id,email,name,role FROM users WHERE email=? and password=?", m.Email, Encrypt(m.Password)).Scan(&u.ID, &u.Email, &u.Name, &u.Role)
 	if err != nil {
 		log.Printf("%s:%s", m.Email, err)
-		return IDNotFound, errors.New("用户名或密码错误")
+		return nil, errors.New("用户名或密码错误")
 	}
 
-	return id, nil
+	return
 }
 
 // Users 获取用户列表
@@ -55,42 +56,41 @@ func Users() ([]*User, error) {
 	var res []*User
 	var err error
 	for rows.Next() {
-		var id int64
-		var name string
-		var email string
-		var role int
-		err = rows.Scan(&id, &name, &email, &role)
+		u := User{}
+		err = rows.Scan(&u.ID, &u.Name, &u.Email, &u.Role)
 		if err != nil {
 			break
 		}
 
-		res = append(res, &User{ID: id, Name: name, Email: email, Role: role})
+		res = append(res, &u)
 	}
+	rows.Close()
 	return res, err
 }
 
 // Create 创建用户
-func (user *User) Create() (int64, error) {
+func (user *User) Create() (err error) {
 
 	//save user data
 
 	stmt, err := Conn.Prepare("INSERT INTO `users` (`name`, `email`, `mobile`, `password`, `role`, `created_at`,`updated_at`) VALUES (?,?,?,?,?,?,?) ")
 	if err != nil {
-		return IDNotFound, err
+		return err
 	}
+	defer stmt.Close()
 
 	hashpwd := Encrypt(user.Password)
 	t := time.Now().Format("2006-01-02 15:04:05")
 	res, err := stmt.Exec(user.Name, user.Email, user.Mobile, hashpwd, user.Role, t, t)
 	if err != nil {
-		return IDNotFound, err
+		return err
 	}
-
 	id, err := res.LastInsertId()
 	if err != nil {
-		return IDNotFound, err
+		return err
 	}
-	return id, nil
+	user.ID = id
+	return
 }
 
 // Update 更新用户信息
@@ -100,14 +100,5 @@ func Update() {
 
 // Delete 删除用户
 func Delete() {
-
-}
-
-type sess struct {
-	Token    string
-	Duration time.Duration
-}
-
-func createSession() {
 
 }
