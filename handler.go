@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -45,6 +46,8 @@ type errResp struct {
 	Code   string `json:"code,omitempty"`
 	Errmsg string `json:"errmsg,omitempty"`
 }
+
+var session *data.Session
 
 func (res *result) returnJSON(w http.ResponseWriter, r *http.Request, code int) {
 	log.Printf("[response]: %s %s [%s]%s", r.Method, r.URL.Path, res.Error.Code, res.Error.Errmsg)
@@ -91,12 +94,12 @@ func login(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	user.CreateSession()
-
+	session = user.CreateSession()
+	fmt.Println(session)
 	//设置cookie
 	c := http.Cookie{
 		Name:     "uid",
-		Value:    user.SessionUID(),
+		Value:    session.UID,
 		HttpOnly: true,
 	}
 
@@ -166,8 +169,6 @@ func userAdd(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // 获取用户列表
 func users(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
-	// 验证用户是否登录
-	// session验证
 	rows, err := data.Users()
 	if err != nil {
 		resp := createFailResp(StatusServerErr, err)
@@ -185,4 +186,22 @@ func usersUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 func usersDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
+	s := ps.ByName("id")
+	id, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		resp := createFailResp(StatusParamsValidErr, err)
+		resp.returnJSON(w, r, http.StatusBadRequest)
+		return
+	}
+
+	err = data.DeleteUser(id)
+	if err != nil {
+		resp := createFailResp(StatusServerErr, err)
+		resp.returnJSON(w, r, http.StatusServiceUnavailable)
+		return
+	}
+
+	// w.WriteHeader(http.StatusOK)
+	resp := createSuccessResp(nil)
+	resp.returnJSON(w, r, http.StatusOK)
 }

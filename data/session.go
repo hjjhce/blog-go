@@ -14,38 +14,44 @@ type Session struct {
 }
 
 // SessionByEmail 通过email获取session
-var SessionByEmail map[string]*Session
+var sess map[string]*Session
 
 // CreateSession 创建会话
-func (u *User) CreateSession() {
+func (u *User) CreateSession() *Session {
 
-	if SessionByEmail == nil {
-		SessionByEmail = make(map[string]*Session)
+	if sess == nil {
+		sess = make(map[string]*Session)
 	}
 
-	sess := &Session{
-		UID:     randNumStr(),
+	key := randNumStr()
+	sess[key] = &Session{
+		UID:     key,
 		ID:      u.ID,
 		Email:   u.Email,
 		Name:    u.Name,
 		Created: time.Now(),
 	}
-
-	SessionByEmail[u.Email] = sess
-}
-
-// SessionUID 获取sessionuid
-func (u *User) SessionUID() string {
-	if v, ok := SessionByEmail[u.Email]; ok {
-		return v.UID
-	}
-	return ""
+	return sess[key]
 }
 
 // Session 获取用户会话
-func (u *User) Session() *Session {
-	if v, ok := SessionByEmail[u.Email]; ok {
+func (u *User) Session(uid string) *Session {
+	if sess == nil {
+		return nil
+	}
+
+	if v, ok := sess[uid]; ok {
 		return v
 	}
 	return nil
+}
+
+// IsLogin 判断是否登录
+func IsLogin(uid string) bool {
+	if sess == nil {
+		return false
+	}
+
+	_, ok := sess[uid]
+	return ok
 }

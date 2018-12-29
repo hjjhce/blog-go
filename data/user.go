@@ -94,11 +94,15 @@ func (user *User) Create() (err error) {
 }
 
 // Update 更新用户信息
-func Update() {
+func (user *User) Update() {
 
 }
 
-// Delete 删除用户
-func Delete() {
-
+// DeleteUser 删除用户
+func DeleteUser(id int64) error {
+	_, err := Conn.Exec("delete from users where id=?", id)
+	if err != nil {
+		return err
+	}
+	return nil
 }
