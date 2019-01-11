@@ -3,6 +3,7 @@ package main
 import (
 	"blog/data"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"path"
@@ -23,17 +24,25 @@ func main() {
 
 	// log.SetOutput(f)
 
-	// 重新写个路由
-	router := httprouter.New()
+	// 定制httprouter
+	router := NewRouter()
 	validate = validator.New()
 
-	router.POST("/v1/users/login", middleware(login))
-	router.POST("/v1/users", middleware(userAdd))
-	router.GET("/v1/users", middleware(users))
-	router.PUT("/v1/users/:id", middleware(usersUpdate))
-	router.DELETE("/v1/users/:id", middleware(usersDelete))
+	router.POST("/v1/users/login", test)
+
+	// router.POST("/v1/users/login", middleware(login))
+	// router.POST("/v1/users", middleware(userAdd))
+	// router.GET("/v1/users", middleware(users))
+	// router.PUT("/v1/users/:id", middleware(usersUpdate))
+	// router.DELETE("/v1/users/:id", middleware(usersDelete))
 
 	log.Fatal(http.ListenAndServe(":9090", router))
+}
+
+func test(ctx *Context) {
+	fmt.Println(ctx.r.Method)
+
+	ctx.JSON(http.StatusOK, H{"code": 200, "msg": "ok"})
 }
 
 func middleware(h httprouter.Handle) httprouter.Handle {

@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/julienschmidt/httprouter"
 	validator "gopkg.in/go-playground/validator.v9"
@@ -39,7 +38,7 @@ type result struct {
 	Status string      `json:"status"`
 	Data   interface{} `json:"data,omitempty"`
 	Error  errResp     `json:"error,omitempty"`
-	Time   string      `json:"time"`
+	// Time   string      `json:"time"`
 }
 
 type errResp struct {
@@ -58,11 +57,28 @@ func (res *result) returnJSON(w http.ResponseWriter, r *http.Request, code int) 
 }
 
 func createFailResp(code string, err error) result {
-	return result{Status: "failed", Error: errResp{Code: code, Errmsg: err.Error()}, Time: time.Now().Format("2006-01-02 15:03:04")}
+	return result{Status: "failed", Error: errResp{Code: code, Errmsg: err.Error()}}
 }
 
 func createSuccessResp(data interface{}) result {
-	return result{Status: "success", Data: data, Time: time.Now().Format("2006-01-02 15:03:04")}
+	return result{Status: "success", Data: data}
+}
+
+type respContent struct {
+	Code int                    `json:"Code"`
+	Data map[string]interface{} `json:"Data,omitempty"`
+	Msg  string                 `json:"msg,omitempty"`
+}
+
+// H 响应数据结构
+type H map[string]interface{}
+
+// JSON 响应JSON数据
+func (ctx *Context) JSON(code int, res H) {
+	log.Printf("[response] %s %d", ctx.r.URL.Path, code)
+
+	ctx.w.WriteHeader(code)
+	json.NewEncoder(ctx.w).Encode(res)
 }
 
 // 用户后台登录
