@@ -3,7 +3,6 @@ package main
 import (
 	"blog/data"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,10 +13,7 @@ import (
 )
 
 // StatusOK 请求成功
-const StatusOK = "success"
-
-// StatusErr 请求失败
-const StatusErr = "failed"
+const StatusOK = "0000"
 
 // StatusRequestJSONErr 请求json解析错误
 const StatusRequestJSONErr = "4001"
@@ -34,61 +30,38 @@ const StatusAuthErr = "4005"
 // StatusServerErr 服务器内部错误
 const StatusServerErr = "5000"
 
-type result struct {
-	Status string      `json:"status"`
-	Data   interface{} `json:"data,omitempty"`
-	Error  errResp     `json:"error,omitempty"`
-	// Time   string      `json:"time"`
-}
-
-type errResp struct {
-	Code   string `json:"code,omitempty"`
-	Errmsg string `json:"errmsg,omitempty"`
-}
-
 var session *data.Session
+var sessList map[string]data.Session
 
-func (res *result) returnJSON(w http.ResponseWriter, r *http.Request, code int) {
-	log.Printf("[response]: %s %s [%s]%s", r.Method, r.URL.Path, res.Error.Code, res.Error.Errmsg)
-
-	w.WriteHeader(code)
-	// json.MarshalIndent(res);w.Write(res)
-	json.NewEncoder(w).Encode(res)
-}
-
-func createFailResp(code string, err error) result {
-	return result{Status: "failed", Error: errResp{Code: code, Errmsg: err.Error()}}
-}
-
-func createSuccessResp(data interface{}) result {
-	return result{Status: "success", Data: data}
-}
-
-type respContent struct {
-	Code int                    `json:"Code"`
-	Data map[string]interface{} `json:"Data,omitempty"`
-	Msg  string                 `json:"msg,omitempty"`
-}
-
-// H 响应数据结构
-type H map[string]interface{}
+// M 响应数据结构
+type M map[string]interface{}
 
 // JSON 响应JSON数据
-func (ctx *Context) JSON(code int, res H) {
-	log.Printf("[response] %s %d", ctx.r.URL.Path, code)
+func (ctx *Context) JSON(code int, res M) {
+
+	if code == http.StatusOK {
+		log.Printf("[response] %s %d", ctx.r.URL.Path, code)
+	} else {
+		log.Printf("[response] %s %d %s", ctx.r.URL.Path, code, res)
+	}
 
 	ctx.w.WriteHeader(code)
 	json.NewEncoder(ctx.w).Encode(res)
 }
 
+func test(ctx *Context) {
+	fmt.Println(ctx.r.Method)
+	ctx.JSON(http.StatusOK, M{"code": 200, "msg": "ok", "hello": "world"})
+}
+
 // 用户后台登录
-func login(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func login(ctx *Context) {
 
 	var auth data.Auth
-	err := json.NewDecoder(r.Body).Decode(&auth)
+	err := json.NewDecoder(ctx.r.Body).Decode(&auth)
 	if err != nil {
-		resp := createFailResp(StatusRequestJSONErr, err)
-		resp.returnJSON(w, r, http.StatusBadRequest)
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusRequestJSONErr, "msg": fmt.Sprintf("%s", err)})
+		return
 	}
 
 	err = validate.Struct(auth)
@@ -97,19 +70,17 @@ func login(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		for _, err := range err.(validator.ValidationErrors) {
 			errmsg += err.Field() + ":" + fmt.Sprintf("%s", err.Value()) + ", the type should be " + err.Type().String() + "(" + err.Tag() + "); "
 		}
-		resp := createFailResp(StatusParamsValidErr, errors.New(errmsg))
-		resp.returnJSON(w, r, http.StatusBadRequest)
+
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": errmsg})
 		return
 	}
 
 	var user *data.User
 	user, err = auth.Login()
 	if err != nil {
-		resp := createFailResp(StatusAuthErr, err)
-		resp.returnJSON(w, r, http.StatusUnauthorized)
+		ctx.JSON(http.StatusUnauthorized, M{"code": StatusAuthErr, "msg": fmt.Sprintf("%s", err)})
 		return
 	}
-
 	session = user.CreateSession()
 	fmt.Println(session)
 	//设置cookie
@@ -119,25 +90,42 @@ func login(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		HttpOnly: true,
 	}
 
-	http.SetCookie(w, &c)
+	http.SetCookie(ctx.w, &c)
+	ctx.JSON(http.StatusOK, M{"code": StatusOK, "msg": "ok"})
+}
 
-	type mdata struct {
-		ID int64 `json:"id"`
+// logout 登出
+func logout(ctx *Context) {
+
+	defer func() {
+		if p := recover(); p != nil {
+			ctx.JSON(http.StatusForbidden, M{"code": StatusForbidden, "msg": fmt.Sprintf("%s", p)})
+			return
+		}
+	}()
+
+	uid, err := ctx.r.Cookie("uid")
+	if err != nil {
+		panic(err)
 	}
 
-	resp := createSuccessResp(mdata{ID: user.ID})
-	resp.returnJSON(w, r, http.StatusOK)
+	if _, ok := sessList[uid.Value]; !ok {
+		panic(err)
+	}
+
+	delete(sessList, uid.Value)
+	ctx.JSON(http.StatusOK, M{"code": StatusOK, "msg": "ok"})
 }
 
 // userAdd 添加用户
-func userAdd(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func userAdd(ctx *Context) {
 
 	var user data.User
 
-	err := json.NewDecoder(r.Body).Decode(&user)
+	err := json.NewDecoder(ctx.r.Body).Decode(&user)
 	if err != nil {
-		resp := createFailResp(StatusRequestJSONErr, err)
-		resp.returnJSON(w, r, http.StatusBadRequest)
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusRequestJSONErr, "msg": fmt.Sprintf("%s", err)})
+		return
 	}
 
 	err = validate.Struct(user)
@@ -160,32 +148,62 @@ func userAdd(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 			errmsg[err.Field()] = fmt.Sprintf("%s", err.Value()) + "; but type should be " + err.Type().String() + " and " + err.Tag() + ";"
 		}
-		newErr := fmt.Errorf("%s", errmsg)
-		resp := createFailResp(StatusParamsValidErr, newErr)
-		resp.returnJSON(w, r, http.StatusBadRequest)
+
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": errmsg})
 		return
 	}
 
 	err = user.Create()
 	if err != nil {
-		resp := createFailResp(StatusServerErr, err)
-		resp.returnJSON(w, r, http.StatusServiceUnavailable)
+		ctx.JSON(http.StatusServiceUnavailable, M{"code": StatusServerErr, "msg": fmt.Sprintf("%s", err)})
 		return
 	}
 
-	type d struct {
-		ID int64 `json:"id"`
-	}
-
-	resp := createSuccessResp(d{ID: user.ID})
-	resp.returnJSON(w, r, http.StatusOK)
+	ctx.JSON(http.StatusOK, M{"code": StatusOK, "msg": "ok"})
 	return
 }
 
 // 获取用户列表
-func users(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func users(ctx *Context) {
 
-	rows, err := data.Users()
+	log.Printf("haha")
+	_, err := data.Users()
+	if err != nil {
+		ctx.JSON(http.StatusServiceUnavailable, M{"code": StatusServerErr, "msg": fmt.Sprintf("%s", err)})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, M{"code": StatusOK, "msg": "ok"})
+}
+
+func usersUpdate(ctx *Context) {
+
+}
+
+func usersDelete(ctx *Context) {
+
+	s := ctx.r.FormValue("id")
+	if len(s) == 0 {
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": "id错误"})
+	}
+
+	id, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": fmt.Sprintf("%s", err)})
+		return
+	}
+
+	err = data.DeleteUser(id)
+	if err != nil {
+		ctx.JSON(http.StatusServiceUnavailable, M{"code": StatusServerErr, "msg": fmt.Sprintf("%s", err)})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, M{"code": StatusOK, "msg": "ok"})
+}
+
+func posts(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	rows, err := data.Posts()
 	if err != nil {
 		resp := createFailResp(StatusServerErr, err)
 		resp.returnJSON(w, r, http.StatusServiceUnavailable)
@@ -196,28 +214,14 @@ func users(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	resp.returnJSON(w, r, http.StatusOK)
 }
 
-func usersUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func postsCreate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 }
 
-func usersDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func postsUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
-	s := ps.ByName("id")
-	id, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		resp := createFailResp(StatusParamsValidErr, err)
-		resp.returnJSON(w, r, http.StatusBadRequest)
-		return
-	}
+}
 
-	err = data.DeleteUser(id)
-	if err != nil {
-		resp := createFailResp(StatusServerErr, err)
-		resp.returnJSON(w, r, http.StatusServiceUnavailable)
-		return
-	}
+func postsDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
-	// w.WriteHeader(http.StatusOK)
-	resp := createSuccessResp(nil)
-	resp.returnJSON(w, r, http.StatusOK)
 }

@@ -1,14 +1,9 @@
 package main
 
 import (
-	"blog/data"
-	"errors"
-	"fmt"
 	"log"
 	"net/http"
-	"path"
 
-	"github.com/julienschmidt/httprouter"
 	"gopkg.in/go-playground/validator.v9"
 )
 
@@ -28,36 +23,29 @@ func main() {
 	router := NewRouter()
 	validate = validator.New()
 
-	router.POST("/v1/users/login", test)
+	router.POST("/v1/users/login", login)
+	router.GET("/v1/users/logout", logout)
 
+	// router.GET("/v1/users/auth", middleware(checkSession))
 	// router.POST("/v1/users/login", middleware(login))
+	// router.GET("/v1/users/logout", middleware(logout))
 	// router.POST("/v1/users", middleware(userAdd))
 	// router.GET("/v1/users", middleware(users))
 	// router.PUT("/v1/users/:id", middleware(usersUpdate))
 	// router.DELETE("/v1/users/:id", middleware(usersDelete))
 
+	//post
+	// router.GET("/v1/posts", middleware(posts))
+	// router.POST("/v1/posts", middleware(postsCreate))
+	// router.PUT("/v1/posts/{id}", middleware(postsUpdate))
+	// router.DELETE("/v1/posts/{id}", middleware(postsDelete))
+
 	log.Fatal(http.ListenAndServe(":9090", router))
 }
 
-func test(ctx *Context) {
-	fmt.Println(ctx.r.Method)
-
-	ctx.JSON(http.StatusOK, H{"code": 200, "msg": "ok"})
-}
-
+/*
 func middleware(h httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-
-		var forbidden = false
-
-		defer func() {
-			if forbidden {
-				http.Redirect(w, r, "/login", http.StatusForbidden)
-				err := errors.New("没有访问权限")
-				resp := createFailResp(StatusForbidden, err)
-				resp.returnJSON(w, r, http.StatusForbidden)
-			}
-		}()
 
 		log.Printf("[Request]: %s %s %s", r.Host, r.URL.RequestURI(), r.Method)
 
@@ -65,7 +53,9 @@ func middleware(h httprouter.Handle) httprouter.Handle {
 		s := r.FormValue("sign")
 
 		if s != adminSign {
-			forbidden = true
+			err := errors.New("没有访问权限")
+			resp := createFailResp(StatusForbidden, err)
+			resp.returnJSON(w, r, http.StatusForbidden)
 			return
 		}
 
@@ -76,10 +66,15 @@ func middleware(h httprouter.Handle) httprouter.Handle {
 			cookiestr, err := r.Cookie("uid")
 
 			if err != nil || !data.IsLogin(cookiestr.Value) {
-				forbidden = true
+				err := errors.New("没有访问权限")
+				resp := createFailResp(StatusForbidden, err)
+				resp.returnJSON(w, r, http.StatusForbidden)
 				return
 			}
 		}
-		h(w, r, ps)
+		// res := h(w, r, ps)
+		// w.WriteHeader(res.Code)
+		// json.NewEncoder(w).Encode(res.Data)
 	}
 }
+*/
