@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/julienschmidt/httprouter"
 	validator "gopkg.in/go-playground/validator.v9"
 )
 
@@ -47,11 +46,6 @@ func (ctx *Context) JSON(code int, res M) {
 
 	ctx.w.WriteHeader(code)
 	json.NewEncoder(ctx.w).Encode(res)
-}
-
-func test(ctx *Context) {
-	fmt.Println(ctx.r.Method)
-	ctx.JSON(http.StatusOK, M{"code": 200, "msg": "ok", "hello": "world"})
 }
 
 // 用户后台登录
@@ -146,7 +140,7 @@ func userAdd(ctx *Context) {
 			fmt.Println(err.Value())
 			fmt.Println(err.Param())
 
-			errmsg[err.Field()] = fmt.Sprintf("%s", err.Value()) + "; but type should be " + err.Type().String() + " and " + err.Tag() + ";"
+			errmsg[err.Field()] = fmt.Sprintf("%s", err.Value()) + "; but type should be " + err.Type().String() + " and " + err.Tag() + " " + err.Param()
 		}
 
 		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": errmsg})
@@ -166,14 +160,13 @@ func userAdd(ctx *Context) {
 // 获取用户列表
 func users(ctx *Context) {
 
-	log.Printf("haha")
-	_, err := data.Users()
+	list, err := data.Users()
 	if err != nil {
 		ctx.JSON(http.StatusServiceUnavailable, M{"code": StatusServerErr, "msg": fmt.Sprintf("%s", err)})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, M{"code": StatusOK, "msg": "ok"})
+	ctx.JSON(http.StatusOK, M{"code": StatusOK, "data": list})
 }
 
 func usersUpdate(ctx *Context) {
@@ -185,6 +178,7 @@ func usersDelete(ctx *Context) {
 	s := ctx.r.FormValue("id")
 	if len(s) == 0 {
 		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": "id错误"})
+		return
 	}
 
 	id, err := strconv.ParseInt(s, 10, 64)
@@ -202,26 +196,21 @@ func usersDelete(ctx *Context) {
 	ctx.JSON(http.StatusOK, M{"code": StatusOK, "msg": "ok"})
 }
 
-func posts(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	rows, err := data.Posts()
+func posts(ctx *Context) {
+	_, err := data.Posts()
 	if err != nil {
-		resp := createFailResp(StatusServerErr, err)
-		resp.returnJSON(w, r, http.StatusServiceUnavailable)
 		return
 	}
-
-	resp := createSuccessResp(rows)
-	resp.returnJSON(w, r, http.StatusOK)
 }
 
-func postsCreate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func postsCreate(ctx *Context) {
 
 }
 
-func postsUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func postsUpdate(ctx *Context) {
 
 }
 
-func postsDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func postsDelete(ctx *Context) {
 
 }

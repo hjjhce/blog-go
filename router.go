@@ -77,6 +77,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -350,6 +351,14 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	//custom
 	log.Printf("[request] %s %s %s", req.Host, path, req.Method)
+
+	// 验证请求头部的token设置
+	reqToken := req.Header["Token"]
+	fmt.Println(reqToken)
+	if len(reqToken) == 0 || reqToken[0] != token {
+		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		return
+	}
 
 	if root := r.trees[req.Method]; root != nil {
 		if handle, _, tsr := root.getValue(path); handle != nil {

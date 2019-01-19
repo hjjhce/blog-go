@@ -10,7 +10,7 @@ import (
 var validate *validator.Validate
 var latestVer = "/v1"
 
-const adminSign = "whyspacex"
+const token = "pingtouge"
 
 func main() {
 
@@ -23,22 +23,19 @@ func main() {
 	router := NewRouter()
 	validate = validator.New()
 
-	router.POST("/v1/users/login", login)
-	router.GET("/v1/users/logout", logout)
-
-	// router.GET("/v1/users/auth", middleware(checkSession))
-	// router.POST("/v1/users/login", middleware(login))
-	// router.GET("/v1/users/logout", middleware(logout))
-	// router.POST("/v1/users", middleware(userAdd))
-	// router.GET("/v1/users", middleware(users))
-	// router.PUT("/v1/users/:id", middleware(usersUpdate))
-	// router.DELETE("/v1/users/:id", middleware(usersDelete))
-
-	//post
-	// router.GET("/v1/posts", middleware(posts))
-	// router.POST("/v1/posts", middleware(postsCreate))
-	// router.PUT("/v1/posts/{id}", middleware(postsUpdate))
-	// router.DELETE("/v1/posts/{id}", middleware(postsDelete))
+	// router.GET("/v1/users/auth", checkSession)
+	{
+		router.POST("/v1/users/login", login)
+		router.GET("/v1/users/logout", logout)
+		router.POST("/v1/users", userAdd)
+		router.GET("/v1/users", users)
+		router.PUT("/v1/users/:id", usersUpdate)
+		router.DELETE("/v1/users/:id", usersDelete)
+		router.GET("/v1/posts", posts)
+		router.POST("/v1/posts", postsCreate)
+		router.PUT("/v1/posts/{id}", postsUpdate)
+		router.DELETE("/v1/posts/{id}", postsDelete)
+	}
 
 	log.Fatal(http.ListenAndServe(":9090", router))
 }
