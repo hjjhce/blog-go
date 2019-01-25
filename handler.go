@@ -4,7 +4,6 @@ import (
 	"blog/data"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -32,21 +31,7 @@ const StatusServerErr = "5000"
 var session *data.Session
 var sessList map[string]data.Session
 
-// M 响应数据结构
-type M map[string]interface{}
-
-// JSON 响应JSON数据
-func (ctx *Context) JSON(code int, res M) {
-
-	if code == http.StatusOK {
-		log.Printf("[response] %s %d", ctx.r.URL.Path, code)
-	} else {
-		log.Printf("[response] %s %d %s", ctx.r.URL.Path, code, res)
-	}
-
-	ctx.w.WriteHeader(code)
-	json.NewEncoder(ctx.w).Encode(res)
-}
+var validate *validator.Validate
 
 // 用户后台登录
 func login(ctx *Context) {
@@ -58,6 +43,7 @@ func login(ctx *Context) {
 		return
 	}
 
+	validate = validator.New()
 	err = validate.Struct(auth)
 	if err != nil {
 		var errmsg string
@@ -122,6 +108,7 @@ func userAdd(ctx *Context) {
 		return
 	}
 
+	validate = validator.New()
 	err = validate.Struct(user)
 	if err != nil {
 
