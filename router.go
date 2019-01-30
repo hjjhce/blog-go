@@ -87,12 +87,6 @@ import (
 // wildcards (variables).
 // type Handle func(http.ResponseWriter, *http.Request, Params)
 
-// Context 请求和响应数据
-type Context struct {
-	w http.ResponseWriter
-	r *http.Request
-}
-
 // Handle 处理HTTP请求
 type Handle func(ctx *Context)
 
@@ -363,7 +357,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if root := r.trees[req.Method]; root != nil {
 		if handle, _, tsr := root.getValue(path); handle != nil {
 			// handle(w, req, ps)
-			ctx := &Context{w, req}
+			ctx := &Context{w: w, r: req}
 			handle(ctx)
 			return
 		} else if req.Method != "CONNECT" && path != "/" {

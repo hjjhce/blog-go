@@ -146,7 +146,6 @@ func userAdd(ctx *Context) {
 
 // 获取用户列表
 func users(ctx *Context) {
-
 	list, err := data.Users()
 	if err != nil {
 		ctx.JSON(http.StatusServiceUnavailable, M{"code": StatusServerErr, "msg": fmt.Sprintf("%s", err)})

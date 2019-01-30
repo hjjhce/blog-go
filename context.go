@@ -55,10 +55,8 @@ func (ctx *Context) Next() {
 	// for k, h := range ctx.hanlders {
 	// 	fmt.Printf("%d, %v\r\n", k, h)
 	// }
-	ctx.index++
-	count := int8(len(ctx.hanlders))
-
-	for ; ctx.index < count; ctx.index++ {
-		ctx.hanlders[ctx.index](ctx)
+	count := len(ctx.hanlders)
+	for index := 0; index < count; index++ {
+		ctx.hanlders[index](ctx)
 	}
 }

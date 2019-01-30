@@ -51,10 +51,10 @@ func main() {
 }
 
 func middleware(ctx *Context) {
-	token, ok := ctx.r.Header["token"]
+	// fmt.Println(ctx.r.Header)
+	token, ok := ctx.r.Header["Token"]
 	if !ok || token[0] != ctx.core.token {
-		// http.Error(ctx.w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-		panic("访问限制")
+		panic("forbiden")
 	}
 }
 
@@ -73,10 +73,9 @@ func New() *Core {
 	c.httprouter = httprouter.New()
 	c.pool.New = func() interface{} {
 		ctx := &Context{}
-		ctx.index = -1
 		return ctx
 	}
-	c.token = "rulesaremeanttobebroken"
+	c.token = "pingtouge"
 	return c
 }
 
@@ -90,22 +89,28 @@ func (core *Core) Run(addr string) {
 func (core *Core) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer func() {
 		if rev := recover(); rev != nil {
-			c := core.createContext(w, req)
-			for i := 0; ; i++ {
-				pc, file, line, ok := runtime.Caller(i)
-				if ok {
-					log.Printf("%s:%d (0x%x) ", file, line, pc)
-				}
-			}
-
-			log.Printf("Panic: %s", rev)
-			c.String(http.StatusServiceUnavailable, fmt.Sprintf("%s", rev))
-			core.pool.Put(c)
+			core.HandlerPanic(w, req, rev)
 		}
 	}()
 
 	log.Printf("[req] %s %s %s", req.Host, req.Method, req.URL.Path)
 	core.httprouter.ServeHTTP(w, req)
+}
+
+// HandlerPanic 异常处理
+func (core *Core) HandlerPanic(w http.ResponseWriter, req *http.Request, rev interface{}) {
+	c := core.createContext(w, req)
+	for i := 3; ; i++ {
+		pc, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		log.Printf("%s:%d (0x%x) ", file, line, pc)
+	}
+
+	log.Printf("Panic: %s", rev)
+	c.String(http.StatusServiceUnavailable, fmt.Sprintf("%s", rev))
+	core.pool.Put(c)
 }
 
 /*
