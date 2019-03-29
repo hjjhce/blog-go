@@ -183,20 +183,114 @@ func usersDelete(ctx *Context) {
 }
 
 func posts(ctx *Context) {
-	_, err := data.Posts()
+
+	list, err := data.Posts()
 	if err != nil {
+		ctx.JSON(http.StatusServiceUnavailable, M{"code": StatusServerErr, "msg": err.Error()})
 		return
 	}
+
+	for i := 0; i < len(list); i++ {
+		fmt.Println(list[i].Status)
+	}
+
+	ctx.JSON(http.StatusOK, M{"code": StatusOK, "data": list})
+}
+
+// 获取单条内容
+func getPostRow(ctx *Context) {
+	s := ctx.params.ByName("id")
+
+	if len(s) <= 0 {
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": "id必须大于0"})
+		return
+	}
+
+	id, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": err.Error()})
+		return
+	}
+	row, err := data.GetPostRow(id)
+	if err != nil {
+		ctx.JSON(http.StatusServiceUnavailable, M{"code": StatusServerErr, "msg": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, M{"code": StatusOK, "data": row})
+	return
+
 }
 
 func postsCreate(ctx *Context) {
+	var post data.Post
+	err := json.NewDecoder(ctx.r.Body).Decode(&post)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusRequestJSONErr, "msg": fmt.Sprintf("%s", err)})
+		return
+	}
 
+	// _, err = valid.ValidateStruct(post)
+	validate = validator.New()
+	err = validate.Struct(post)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": err.Error()})
+		return
+	}
+
+	err = post.Create()
+	if err != nil {
+		ctx.JSON(http.StatusServiceUnavailable, M{"code": StatusServerErr, "msg": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, M{"code": StatusOK, "msg": "ok"})
 }
 
 func postsUpdate(ctx *Context) {
+	var post data.Post
+	err := json.NewDecoder(ctx.r.Body).Decode(&post)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusRequestJSONErr, "msg": err.Error()})
+		return
+	}
 
+	fmt.Println(post)
+
+	validate := validator.New()
+	err = validate.Struct(post)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": err.Error()})
+		return
+	}
+
+	err = post.Update()
+	if err != nil {
+		ctx.JSON(http.StatusServiceUnavailable, M{"code": StatusServerErr, "msg": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, M{"code": StatusOK, "msg": http.StatusText(http.StatusOK)})
 }
 
 func postsDelete(ctx *Context) {
 
+	//ctx.r.ParseForm()
+	//id := ctx.r.Form["id"]
+	s := ctx.params.ByName("id")
+	// s := ctx.r.FormValue("id")
+	if len(s) == 0 {
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": "id不能为空"})
+		return
+	}
+
+	id, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, M{"code": StatusParamsValidErr, "msg": err.Error()})
+		return
+	}
+	err = data.DeletePost(id)
+	if err != nil {
+		ctx.JSON(http.StatusServiceUnavailable, M{"code": StatusServerErr, "msg": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, M{"code": StatusOK, "msg": http.StatusText(http.StatusOK)})
 }

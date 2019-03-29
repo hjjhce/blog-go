@@ -33,7 +33,6 @@ func main() {
 	v1 := c.Group("/v1")
 	// v1.Use(checkAuth)
 	{
-		// v1.GET("/test", func(ctx *Context){ ctx.JSON(http.StatusOK, M{"hello":"world"})})
 		v1.POST("/users/login", login)
 		v1.GET("/users/logout", logout)
 		v1.POST("/users", userAdd)
@@ -42,9 +41,10 @@ func main() {
 		v1.DELETE("/users/:id", usersDelete)
 
 		v1.GET("/posts", posts)
+		v1.GET("/posts/:id", getPostRow)
 		v1.POST("/posts", postsCreate)
-		v1.PUT("/posts/{id}", postsUpdate)
-		v1.DELETE("/posts/{id}", postsDelete)
+		v1.PUT("/posts/:id", postsUpdate)
+		v1.DELETE("/posts/:id", postsDelete)
 	}
 
 	c.Run(":9090")
@@ -112,39 +112,3 @@ func (core *Core) HandlerPanic(w http.ResponseWriter, req *http.Request, rev int
 	c.String(http.StatusServiceUnavailable, fmt.Sprintf("%s", rev))
 	core.pool.Put(c)
 }
-
-/*
-func middleware(h httprouter.Handle) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-
-		log.Printf("[Request]: %s %s %s", r.Host, r.URL.RequestURI(), r.Method)
-
-		r.ParseForm()
-		s := r.FormValue("sign")
-
-		if s != adminSign {
-			err := errors.New("没有访问权限")
-			resp := createFailResp(StatusForbidden, err)
-			resp.returnJSON(w, r, http.StatusForbidden)
-			return
-		}
-
-		//每次请求都判断下session
-		p := path.Base(r.URL.Path)
-
-		if p != "login" {
-			cookiestr, err := r.Cookie("uid")
-
-			if err != nil || !data.IsLogin(cookiestr.Value) {
-				err := errors.New("没有访问权限")
-				resp := createFailResp(StatusForbidden, err)
-				resp.returnJSON(w, r, http.StatusForbidden)
-				return
-			}
-		}
-		// res := h(w, r, ps)
-		// w.WriteHeader(res.Code)
-		// json.NewEncoder(w).Encode(res.Data)
-	}
-}
-*/

@@ -18,8 +18,8 @@ type User struct {
 	Password  string `json:"password" validate:"required"`
 	Checkpwd  string `json:"checkpwd" validate:"required,eqfield=Password"`
 	Role      int    `json:"role" validate:"numeric"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt string
+	UpdatedAt string
 }
 
 // Auth 用户登录认证结构
@@ -59,7 +59,7 @@ func Users() ([]*User, error) {
 		u := User{}
 		err = rows.Scan(&u.ID, &u.Name, &u.Email, &u.Role)
 		if err != nil {
-			break
+			return nil, err
 		}
 
 		res = append(res, &u)

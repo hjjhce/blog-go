@@ -35,6 +35,7 @@ func (rs *Routers) Handle(method, path string, handlers []HandlerFunc) {
 	rs.core.httprouter.Handle(method, finalPath, func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		c := rs.core.createContext(w, req)
 		c.hanlders = handlers
+		c.params = p
 		c.Next() //遍历执行handlers
 		rs.core.pool.Put(c)
 	})

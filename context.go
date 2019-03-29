@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 // Context 请求和响应数据
@@ -15,6 +17,7 @@ type Context struct {
 	sessions *data.Session
 	index    int8
 	core     *Core
+	params   httprouter.Params
 }
 
 func (core *Core) createContext(w http.ResponseWriter, r *http.Request) *Context {
